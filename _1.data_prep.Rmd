@@ -81,7 +81,7 @@ ggboxplot(data, x = "day", y = "tot_ctnt", color = "cell", ylab = "Expression", 
 #ggsave(path = "03_plots", filename = str_c("qplot",  format(Sys.Date(), "%Y%m%d"), format(Sys.time(), "_%H%M"), ".pdf"), height = 4, width = 8, units = "in")
 ```
 
-#STEP3 Create tools to use in down stream analysist 
+#STEP3 Create tools to use in down stream analysis
 UPDATE AS NEEDED
 
 ```{r measurments}

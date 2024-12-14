@@ -1,7 +1,7 @@
 Flow R scripts for flow analysis.
 -Each Rmd is setup to run on an empty environemnt with eveerything needed loaded within that Rmd.
 
-theme_Publication.R --> theme for graphs, run before producing any graph
+theme_Publication.R --> theme for graphs
 
 *FOLDERS:* 
   00_raw_data - raw unmanipulated data
@@ -18,11 +18,17 @@ theme_Publication.R --> theme for graphs, run before producing any graph
       STEP2: Visually Inspect Data 
       STEP3: Prep Tools for Downstream Analysis
       
-  _2.data_firstpass.Rmd
-      - Script will generate and save summary statistics for use in generating bargraphs of flow data.  Script 
-        will generate a (1) combined grid of bargraphs for all flow measurments and treatment arms (2) Individual 
-        graphs of each flow measurement with treatment or cell faceted and (3) Individual graphs of each treatment
-        for each flow measure visualizing cell type comparisions.  
+  _2.data_plots.Rmd
+      - Generate and save summary statistics for use in generating bargraphs of flow data.  
+      - Generate a plots: Run theme_publication in theme_Publication.R 
+          (1) main folder: combined grid of bargraphs for all flow measurments and treatment arms 
+          (2) faceted:: (a) facet by treatment to compare T21vD21 (b) facet by cell to compare treatment 
+          (3) bytreatment: individual graphs of each treatment for each flow measure visualizing cell type comparisions
+          (4) bycell: individual graphs of each cell type for each flow measure visualizing treatment comparisions
+          (5) byday: individual plots for each day and treatment combination of all measurements and cell types 
+          (6) main folder: combined graph of cell types and multiple treatments for each measurment 
+          
+          
       - Script DOES NOT generate plots of a two treatment (TRTvsCTRL) graph. These graphs can be generated 
         in _4.TRTvsCTRLanalysis.Rmd as needed.
   
@@ -71,3 +77,10 @@ STATISTICS GUIDE
   a. Welch's -- non normal var and dist -- (2 groups)
 
 --------------------------------------------------------------------------------------
+
+Stat notes:
+Tukey's Honest Significant Difference (HSD) test automatically provides adjusted p-values to account for multiple comparisons. These p-values, often referred to as "corrected" or "adjusted," are included in the TukeyHSD() output under the p adj column.
+
+How Tukey's HSD Adjusts P-Values
+Tukey's method controls the family-wise error rate (FWER), ensuring that the probability of making at least one Type I error across all pairwise comparisons is below your significance level (commonly 0.05).
+This adjustment is necessary when performing multiple comparisons because it reduces the likelihood of false positives.
