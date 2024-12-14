@@ -1,0 +1,73 @@
+Flow R scripts for flow analysis.
+-Each Rmd is setup to run on an empty environemnt with eveerything needed loaded within that Rmd.
+
+theme_Publication.R --> theme for graphs, run before producing any graph
+
+*FOLDERS:* 
+  00_raw_data - raw unmanipulated data
+  01_tidy_data - manipulated/transformed/subsetted data or new dataframes generated for downstream analysis
+  02_tables - tabled results from analyses preformed 
+  03_ plots - visuals generated
+
+*Rmd Files:*
+  _1.data_prep.Rmd
+    This scrift only needs to be ran ONCE.
+      - Script preps and inspects data for use in downstream analysis. It will save a new dataframe in tidy data          folder to be used for analysis. 
+      
+      STEP1: Import data and Prep Data
+      STEP2: Visually Inspect Data 
+      STEP3: Prep Tools for Downstream Analysis
+      
+  _2.data_firstpass.Rmd
+      - Script will generate and save summary statistics for use in generating bargraphs of flow data.  Script 
+        will generate a (1) combined grid of bargraphs for all flow measurments and treatment arms (2) Individual 
+        graphs of each flow measurement with treatment or cell faceted and (3) Individual graphs of each treatment
+        for each flow measure visualizing cell type comparisions.  
+      - Script DOES NOT generate plots of a two treatment (TRTvsCTRL) graph. These graphs can be generated 
+        in _4.TRTvsCTRLanalysis.Rmd as needed.
+  
+      STEP1: Load Data 
+      STEP2: Generate Summary Statistics 
+      STEP3: Generate First Pass Bar Graphs of All Data
+      
+  _3.stats_analysis_vsCTRL.Rmd
+      - Script will run test of equal variance and normality assumptions on data. For most accurate results you 
+        should only include data that will be directly compared for these tests, thus this script runs 
+        assumptionsfor each flow measurement at a given day (1) For each treatment, T21 vs D21  and (2) For each 
+        cell type, treatment vs control.As these are the comparision I wish to make.
+      - Similarly the script will run four common statistic tests 
+            (1) Kruskal Wallis Multiple Comparision Non Parametric Test 
+            (2) Wilcoxon signed-rank Test 
+            (3) Welch's Paired Non Parametric T Test 
+            (4) Paired T Test. 
+        Results for assumptions and statistic tests are store as a dataframe in the 02_tables folder. 
+      - Graphs are also generated to match and are saved in a sub folder in 03_plots called 'vsCTRL'.
+      
+      notes: The control group is manually defined in the code as "CTRL" if you want to change the control group
+         you can do so by just changing that line of code. The code is set up to save the file with the 
+         treatment you set as the control. For example if you set control = CTRL the file will save as 
+         XtreatmentvsCTRL. If you set control = RA then file will say XtreatmentvsRA. I would recommend also 
+         editing the folder code to create a folder to match your new control arm. 
+      
+    _4.count.Rmd
+        - script for analyzing cell count data. Generates line and best fit graphs. Run stats comparing to 
+          CTRL treatment and D21 vs T21 
+
+STATISTICS GUIDE 
+--------------------------------------------------------------------
+#If variance and normality pass: parametric test
+  1. ANOVA - multiple comparison
+     a.tukeys.temp.Rmd -- all comparisons 
+     b.contrast.comp.temp.rmd -- select comparison 
+  2. T-test paired (2 groups)
+
+#If variance passed and normality failed: 
+  1. Kruskal Wallis Test (ANOVA Alt) -- ANOva alt, multiple comparisons (not paired)
+      a. dunns as follow up if more thancomparisons 
+  2. Mann Whitney U test/Wilcoxon rank-sum tests - t-test (not paired) 
+  3. Wilcoxon signed-rank test - t-test paired alt --- *** needs higher samples size  
+  
+#If varaiance and normality failed: 
+  a. Welch's -- non normal var and dist -- (2 groups)
+
+--------------------------------------------------------------------------------------
