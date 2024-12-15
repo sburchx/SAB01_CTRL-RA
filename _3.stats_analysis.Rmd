@@ -9,16 +9,18 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 #Analysis overview
-For each day:
-    1. Compare T21vD21 within each treatment 
-    2. Compare TRTvCTRL for each cell type 
+For each day and each measurement:
+    (1) Compare TRTvCTRL for each cell type 
+    (2) Compare T21vD21 within each treatment 
 
 ## Data Inspection and Summary Stats:
-STEP1: Load Tidy Data 
+STEP1: Load Libraries and Data 
 STEP2: Check Assumptions
 STEP3: Run Statistical Analysis  
 STEP4: Generate Matching Bar Plots 
 
+
+STEP1: Load Libraries and Data 
 ```{r loading libraries, include=FALSE}
 
 library(readr)
@@ -30,7 +32,6 @@ library(ggplot2)
 
 ```
 
-#STEP1: Load Data
 ```{r load data, include=FALSE}
 
 data <- read_csv("01_tidy_data/data.csv")
@@ -38,11 +39,13 @@ long_data <- read_csv("01_tidy_data/long_data.csv")
 color_map <- read_csv("01_tidy_data/color_map.csv")
 measurements <- readRDS("01_tidy_data/measurements.rds")
 treatment_order <- readRDS("01_tidy_data/treatment_order.rds")
-sumstats_all <- read_csv("02_tables/sumstats_all.csv")
+sumstats_all <- read_csv("02_tables/sumstats_all.csv") 
 
 ```
 
-# Step2: Check  Assumptions for Each Flow Measurment
+# STEP2: Check  Assumptions for Data in Comparison 
+
+TRTvCTRL  and D21vT21 
 ```{r variance and normality }
 library(car) #for levenes test
 
@@ -178,10 +181,10 @@ print(assumption_results)
 
 # STEP3: Run Statistical Analysis
 Common tests in one loop
-1. Comparison of T21 vs D21 for each treatment for each day
-2. Comparision of treatment vs control for each cell type for each day 
 
-```{r comparison }
+```{r comparision }
+library(ggpubr)
+
 results_cell <- data.frame(
   Measurement = character(),
   Day = numeric(),
@@ -219,7 +222,7 @@ for (treatment_val in treatment_groups) {
     for (day_val in unique(subset_data$day)) {
       for (current_treatment in unique(subset_data$treatment)) {
        
-         # Filter data for current day, treatment, and measurement
+         # Filter data for current day and  treatment
         data_day_treatment <- subset_data %>%
           filter(day == day_val, treatment == current_treatment)
 
@@ -230,18 +233,26 @@ for (treatment_val in treatment_groups) {
           
           # Run Wilcoxon, Welch, and Paired t-tests if exactly two cell types
           if (length(unique(data_day_treatment$cell)) == 2) {
+            
             wilcox_test <- wilcox.test(as.formula(paste(measure, "~ cell")), data = data_day_treatment)
             wilcox_p <- wilcox_test$p.value
             
             welch_test <- t.test(as.formula(paste(measure, "~ cell")), data = data_day_treatment, var.equal = FALSE)
             welch_p <- welch_test$p.value
             
-            # Paired t-test if matching subjects are found
-            if (!any(duplicated(data_day_treatment$subject))) {
-              paired_test <- t.test(as.formula(paste(measure, "~ cell")), data = data_day_treatment, paired = TRUE)
+            # Paired t-test 
+            # Step 1: Reshape the data to align CTRL and RA replicates
+            data_paired <- data_day_treatment %>%
+              select(exp_no, cell, measure) %>%  
+              spread(key = cell, value = measure)
+            
+            # Step 3: Perform a paired t-test
+            if (all(c("S3D21", "S3T21") %in% colnames(data_paired))) {
+              paired_test <- t.test(data_paired$S3D21, data_paired$S3T21, paired = TRUE)
               paired_p <- paired_test$p.value
-            }
+            } 
           }
+        
           
           # Store results for cell type comparisons
           results_cell <- rbind(results_cell, data.frame(
@@ -273,17 +284,24 @@ for (treatment_val in treatment_groups) {
           
           # Run Wilcoxon, Welch, and Paired t-tests if exactly two treatments
           if (length(unique(data_day_cell$treatment)) == 2) {
+            
             wilcox_test <- wilcox.test(as.formula(paste(measure, "~ treatment")), data = data_day_cell)
             wilcox_p <- wilcox_test$p.value
             
             welch_test <- t.test(as.formula(paste(measure, "~ treatment")), data = data_day_cell, var.equal = FALSE)
             welch_p <- welch_test$p.value
             
-            # Paired t-test if matching subjects are found
-            if (!any(duplicated(data_day_cell$subject))) {
-              paired_test <- t.test(as.formula(paste(measure, "~ treatment")), data = data_day_cell, paired = TRUE)
+            # Paired t-test 
+            # Step 1: Reshape the data 
+            data_paired <- data_day_cell %>%
+              select(exp_no, treatment, measure) %>%  
+              spread(key = treatment, value = measure)
+            
+            # Step 3: Perform a paired t-test
+            if (all(c(control_group, treatment_val) %in% colnames(data_paired))) {
+              paired_test <- t.test(data_paired[[control_group]], data_paired[[treatment_val]], paired = TRUE)
               paired_p <- paired_test$p.value
-            }
+            } 
           }
           
           # Store results
@@ -308,7 +326,8 @@ for (treatment_val in treatment_groups) {
 print(results_cell)
 print(results_treatment)
 
- 
+
+
 ```
 
 ```{r save stats }
@@ -316,113 +335,10 @@ write.csv(results_cell,"02_tables/cell_stats.csv")
 write.csv(results_treatment,"02_tables/treatment_stats.csv")
 ```
 
-```{r save stats }
+```{r xyz }
 
 ```
 
-#STEP4: Generate Matching Barplots  ---
-#DONT NEED HERE ONLY RA AND CTRL HERE
-
-
-```{r create subfolder for individual treatment graphs}
-# Define the path and folder name
-folder_path <- "03_plots/vsCTRL"
-
-# Create the folder
-if (!dir.exists(folder_path)) {
-  dir.create(folder_path, recursive = TRUE)
-  message("Folder created at: ", folder_path)
-} else {
-  message("Folder already exists at: ", folder_path)
-}
-```
-
-```{r vs CTRL }
-
-# Define the control group manually
-control_group <- "CTRL"
-
-
-# Loop through each measurement 
-for (measure in measurements) {
-  
-  # Filter data for  current measurement
-  summary_data <- sumstats_all %>% 
-    filter(measurement == measure)%>%
-    na.omit()
-  
-  measure_data <- long_data %>%
-    filter(measurement == measure)%>%
-    na.omit() 
-  
-  
-  # Loop through treatments
-  for (treatment_val in unique(measure_data$treatment)) {
-    if (treatment_val != control_group) {
-      
-      # Filter data for control and current treatment
-      comparison_data <- measure_data %>% filter(treatment %in% c(control_group, treatment_val))
-      comparison_summary <- summary_data %>% filter(treatment %in% c(control_group, treatment_val))
-      
-      # First Plot: Comparing cell types, with days on x-axis and fill by cell
-      plot1 <- ggplot(comparison_summary, aes(x = factor(day), y = mean, fill = cell)) +
-        geom_bar(width=.8, stat = "identity", position = position_dodge(width = 0.9), alpha = 0.8) +
-        scale_y_continuous(labels = scales::percent_format(,1)) +
-        geom_point(data = comparison_data, aes(x = factor(day), y = value), 
-                   position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.9), 
-                   size = 1.5, alpha = 0.6) +
-        geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd),
-                      position = position_dodge(width = 0.9), width = 0.2, color = "black") +
-        scale_fill_manual(values = setNames(color_map$Color, color_map$Group)) +
-        facet_wrap(~ treatment) +
-        labs(
-          title = paste(measure, "- Comparison of Cell Types in", treatment_val, "&", control_group),
-          x = "Day",
-          y = measure) +
-        theme_bw() +
-        theme(legend.position = "top",
-          legend.text = element_text(size = 14),
-          axis.text.x = element_text(size = 12), 
-          axis.text.y = element_text(size = 11),
-          axis.title.x = element_text(size = 14),
-          axis.title.y = element_text(size = 14))
-      
-      #Define filename
-      file_name1 <- paste0(measure, "--", treatment_val, "vs", control_group,  "_facet_treatment.pdf")
-      
-      ggsave(file_name1, path = "03_plots/vsCTRL", plot = plot1, width = 8, height = 6, units = "in")
-      
-      # Second Plot: Comparing treatments, with days on x-axis and fill by treatment
-      plot2 <- ggplot(comparison_summary, aes(x = factor(day), y = mean, fill = treatment)) +
-        geom_bar(width=.8, stat = "identity", position = position_dodge(width = 0.9), alpha = 0.8) +
-        scale_y_continuous(labels = scales::percent_format(,1)) +
-        geom_point(data = comparison_data, aes(x = factor(day), y = value), 
-                   position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.9), 
-                   size = 1.5, alpha = 0.6) +
-        geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd),
-                      position = position_dodge(width = 0.9), width = 0.2, color = "black") +
-        scale_fill_manual(values = setNames(color_map$Color, color_map$Group)) +
-        facet_wrap(~ cell) +
-        labs(
-          title = paste(measure, "- Comparison of", treatment_val, "vs", control_group),
-          x = "Day",
-          y = measure) +
-        theme_bw() +
-        theme(legend.position = "top",
-          legend.text = element_text(size = 14),
-          axis.text.x = element_text(size = 12), 
-          axis.text.y = element_text(size = 11),
-          axis.title.x = element_text(size = 14),
-          axis.title.y = element_text(size = 14))
-      
-      file_name2 <- paste0(measure, "--", treatment_val, "vs", control_group, "_facet_cell.pdf")
-      
-      ggsave(file_name2, path = "03_plots/vsCTRL", plot = plot2, width = 8, height = 6, units = "in")
-    }
-  }
-}
- 
-```
 
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

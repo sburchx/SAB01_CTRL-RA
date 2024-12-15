@@ -12,52 +12,53 @@ theme_Publication.R --> theme for graphs
 *Rmd Files:*
   _1.data_prep.Rmd
     This scrift only needs to be ran ONCE.
-      - Script preps and inspects data for use in downstream analysis. It will save a new dataframe in tidy data          folder to be used for analysis. 
+      - Script preps and inspects data for use in downstream analysis. It will save a new dataframe in tidy data folder to be used for analysis. 
       
       STEP1: Import data and Prep Data
       STEP2: Visually Inspect Data 
       STEP3: Prep Tools for Downstream Analysis
       
   _2.data_plots.Rmd
-      - Generate and save summary statistics for use in generating bargraphs of flow data.  
-      - Generate a plots: Run theme_publication in theme_Publication.R 
-          (1) main folder: combined grid of bargraphs for all flow measurments and treatment arms 
-          (2) faceted:: (a) facet by treatment to compare T21vD21 (b) facet by cell to compare treatment 
-          (3) bytreatment: individual graphs of each treatment for each flow measure visualizing cell type comparisions
-          (4) bycell: individual graphs of each cell type for each flow measure visualizing treatment comparisions
-          (5) byday: individual plots for each day and treatment combination of all measurements and cell types 
-          (6) main folder: combined graph of cell types and multiple treatments for each measurment 
-          
-          
-      - Script DOES NOT generate plots of a two treatment (TRTvsCTRL) graph. These graphs can be generated 
-        in _4.TRTvsCTRLanalysis.Rmd as needed.
   
       STEP1: Load Data 
       STEP2: Generate Summary Statistics 
+        - Generate and save summary statistics for use in generating bargraphs of flow data.  
       STEP3: Generate First Pass Bar Graphs of All Data
+        - Generate a plots: Run theme_publication in theme_Publication.R 
+            (1) main folder: combined grid of bargraphs for all flow measurments and treatment arms 
+            (2) faceted:: (a) facet by treatment to compare T21vD21 (b) facet by cell to compare treatment 
+            (3) bytreatment: individual graphs of each treatment for each flow measure visualizing cell type comparisions
+            (4) bycell: individual graphs of each cell type for each flow measure visualizing treatment comparisions
+            (5) byday: individual plots for each day and treatment combination of all measurements and cell types 
+            (6) main folder: combined graph of cell types and multiple treatments for each measurment 
       
   _3.stats_analysis_vsCTRL.Rmd
-      - Script will run test of equal variance and normality assumptions on data. For most accurate results you 
+  
+      STEP1: Load Libraries and Data 
+      STEP2: Assumptions for Data in Comparison 
+        - Script will run test of equal variance and normality assumptions on data. For most accurate results you 
         should only include data that will be directly compared for these tests, thus this script runs 
-        assumptionsfor each flow measurement at a given day (1) For each treatment, T21 vs D21  and (2) For each 
-        cell type, treatment vs control.As these are the comparision I wish to make.
+        assumptions for each flow measurement at a given day (1) For each treatment, T21 vs D21  and (2) For each 
+        cell type, treatment vs control. As these are the comparision I wish to make.
+      
+      STEP3: 
       - Similarly the script will run four common statistic tests 
             (1) Kruskal Wallis Multiple Comparision Non Parametric Test 
             (2) Wilcoxon signed-rank Test 
             (3) Welch's Paired Non Parametric T Test 
             (4) Paired T Test. 
-        Results for assumptions and statistic tests are store as a dataframe in the 02_tables folder. 
-      - Graphs are also generated to match and are saved in a sub folder in 03_plots called 'vsCTRL'.
-      
+        Results for assumptions and statistic tests are store in two  dataframe (a) cell comparision and (b) treatment comparision 
+
       notes: The control group is manually defined in the code as "CTRL" if you want to change the control group
          you can do so by just changing that line of code. The code is set up to save the file with the 
          treatment you set as the control. For example if you set control = CTRL the file will save as 
-         XtreatmentvsCTRL. If you set control = RA then file will say XtreatmentvsRA. I would recommend also 
-         editing the folder code to create a folder to match your new control arm. 
+         TreatmentvsCTRL. If you set control = RA then file will say TreatmentvsRA. I would recommend also 
+         editing the folder code to create a folder to match your new control arm. or to save differently 
       
     _4.count.Rmd
         - script for analyzing cell count data. Generates line and best fit graphs. Run stats comparing to 
           CTRL treatment and D21 vs T21 
+          
 
 STATISTICS GUIDE 
 --------------------------------------------------------------------
