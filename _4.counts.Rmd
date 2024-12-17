@@ -1,7 +1,8 @@
 ---
 title: "Cell Growth Analysis"
 output: html_document
-date: "2024-11-8"
+author: "Shalise Burch"
+date: "2024-12-16"
 ---
 
 ```{r setup, include=FALSE}
@@ -15,9 +16,7 @@ STEP3: Check Assumptions - Variance and Normality
 STEP4: Run Appropriate Stat Tests
 
 
-
-
-```{r load libraries}
+```{r load libraries, message=FALSE, warning=FALSE}
 
 library(readxl)
 library(dplyr)
@@ -57,14 +56,14 @@ boxplot
 
 
 
-#STEP2: Summary Statistics
+#STEP2: Summary Statistics and Graphs
 ```{r summary statistic}
 
 counts_sumstats <- group_by(count_data, cell, day, treatment) %>%
   summarise(mean=mean(cell_cm2), sd=sd(cell_cm2)) %>%
   arrange(desc(mean))
 
-write.csv(counts_sumstats,"02_tables/counts_sumstats.csv")
+write.csv(counts_sumstats,"02_tables/cell_growth_sumstats.csv")
 print(counts_sumstats)
 
 
@@ -72,7 +71,20 @@ print(counts_sumstats)
 
 
 
-#GRAPHS 
+#Generate graphs 
+```{r create subfolder for cell growth  graphs}
+# Define the path and folder name
+folder_path <- "03_plots/cell_growth"
+
+# Create the folder
+if (!dir.exists(folder_path)) {
+  dir.create(folder_path, recursive = TRUE)
+  message("Folder created at: ", folder_path)
+} else {
+  message("Folder already exists at: ", folder_path)
+}
+```
+
 
 ```{r grid overview of data }
 
@@ -114,11 +126,11 @@ linebf.grid
 
 ```{r save }
 ggsave(linebf.grid, path = "03_plots/cell_growth",
-      filename = str_c("linebf_grid_",  format(Sys.Date(), "%Y%m%d"), format(Sys.time(), "-%H%M"), ".pdf"),
+      filename = str_c("linebf_grid.pdf"),
        height = 4, width = 10, units = "in")
 
 ggsave(line.grid, path = "03_plots/cell_growth",
-      filename = str_c("line_grid_",  format(Sys.Date(), "%Y%m%d"), format(Sys.time(), "-%H%M"), ".pdf"),
+      filename = str_c("line_grid.pdf"),
        height = 4, width = 10, units = "in")
 ```
 
@@ -215,7 +227,7 @@ linebf1<- ggplot(count_data, aes(x=day, y=cell_cm2, fill=cell, group=cell))+
   x = "Day",
   y = "Cells per Cm2",
   fill = "" )+
-  facet_wrap(~factor(treatment, levels=c('CTRL','SAG','VIS','RA', 'RA&SAG', 'RA&VIS')),nrow = 1)
+  facet_wrap(~factor(treatment, levels=treatment_order),nrow = 1)
 linebf1
 
 #sperated by cell
@@ -237,47 +249,34 @@ linebf2
 
 ```
 
-```{r create subfolder for individual treatment graphs}
-# Define the path and folder name
-folder_path <- "03_plots/cell_growth"
-
-# Create the folder
-if (!dir.exists(folder_path)) {
-  dir.create(folder_path, recursive = TRUE)
-  message("Folder created at: ", folder_path)
-} else {
-  message("Folder already exists at: ", folder_path)
-}
-```
-
 
 ```{r save}
 #bargraphs
 ggsave(bar1, path = "03_plots/cell_growth",
-      filename = str_c("bar1-",  format(Sys.Date(), "%Y-%m-%d"), format(Sys.time(), "_%H%M"), ".pdf"),
+      filename = str_c("bar1.pdf"),
        height = 3, width = 6, units = "in")
 
 ggsave(bar2, path = "03_plots/cell_growth",
-      filename = str_c("bar2-",  format(Sys.Date(), "%Y-%m-%d"), format(Sys.time(), "_%H%M"), ".pdf"),
+      filename = str_c("bar2.pdf"),
        height = 3, width = 6, units = "in")
 
 #line graph 
 ggsave(line1, path = "03_plots/cell_growth",
-      filename = str_c("line1-",  format(Sys.Date(), "%Y-%m-%d"), format(Sys.time(), "_%H%M"), ".pdf"),
+      filename = str_c("line1.pdf"),
        height = 3, width = 6, units = "in")
 
 ggsave(line2, path = "03_plots/cell_growth",
-      filename = str_c("line2-",  format(Sys.Date(), "%Y-%m-%d"), format(Sys.time(), "_%H%M"), ".pdf"),
+      filename = str_c("line2.pdf"),
        height = 3, width = 6, units = "in")
 
 
 #best fit graph 
 ggsave(linebf1, path = "03_plots/cell_growth",
-      filename = str_c("linebf1-",  format(Sys.Date(), "%Y%m%d"), format(Sys.time(), "-%H%M"), ".pdf"),
+      filename = str_c("linebf1.pdf"),
        height = 3, width = 6, units = "in")
 
 ggsave(linebf2, path = "03_plots/cell_growth",
-      filename = str_c("linebf2-",  format(Sys.Date(), "%Y%m%d"), format(Sys.time(), "-%H%M"), ".pdf"),
+      filename = str_c("linebf2.pdf"),
        height = 3, width = 6, units = "in")
 ```
 
@@ -505,28 +504,31 @@ for (treatment_val in treatment_groups) {
         # Kruskal-Wallis test
         kruskal_test <- kruskal.test(cell_cm2 ~ cell, data = data_day_treatment)
         kruskal_p <- kruskal_test$p.value
-
-        # Run tests if exactly two cell types are present
-        if (length(unique(data_day_treatment$cell)) == 2) {
-          
-          # Wilcoxon test with exact = FALSE to handle ties
-          wilcox_test <- tryCatch({
-            wilcox.test(cell_cm2 ~ cell, data = data_day_treatment, exact = FALSE)
-          }, error = function(e) NA)
-          wilcox_p <- if (!is.na(wilcox_test)) wilcox_test$p.value else NA
-
-          # Welch t-test only if data isn't constant
-          if (var(data_day_treatment$cell_cm2) > 0) {
+        
+        
+        # Run Wilcoxon, Welch, and Paired t-tests if exactly two treatments
+          if (length(unique(data_day_treatment$cell)) == 2) {
+            
+            wilcox_test <- wilcox.test(cell_cm2 ~ cell, data = data_day_treatment, exact = FALSE)
+            wilcox_p <- wilcox_test$p.value
+            
+            if (var(data_day_treatment$cell_cm2) > 0) {
             welch_test <- t.test(cell_cm2 ~ cell, data = data_day_treatment, var.equal = FALSE)
             welch_p <- welch_test$p.value
             
-            # Paired t-test if matching subjects are found and data isn’t constant
-            if (!any(duplicated(data_day_treatment$subject))) {
-              paired_test <- t.test(cell_cm2 ~ cell, data = data_day_treatment, paired = TRUE)
+            # Paired t-test 
+            # Step 1: Reshape the data 
+            data_paired <- data_day_treatment %>%
+              select(exp, cell, cell_cm2) %>%  
+              spread(key = cell, value = cell_cm2)
+            
+            # Step 3: Perform a paired t-test
+            if (all(c("S3D21", "S3T21") %in% colnames(data_paired))) {
+              paired_test <- t.test(data_paired$S3D21, data_paired$S3T21, paired = TRUE)
               paired_p <- paired_test$p.value
+            } 
             }
           }
-        }
         
         # Store results for cell type comparisons
         results_cell <- rbind(results_cell, data.frame(
@@ -561,34 +563,38 @@ for (treatment_val in treatment_groups) {
         # Kruskal-Wallis test
         kruskal_test <- kruskal.test(cell_cm2 ~ treatment, data = data_day_cell)
         kruskal_p <- kruskal_test$p.value
-
-        # Run tests if exactly two treatments are present
-        if (length(unique(data_day_cell$treatment)) == 2) {
-          
-          # Wilcoxon test with exact = FALSE to handle ties
-          wilcox_test <- tryCatch({
-            wilcox.test(cell_cm2 ~ treatment, data = data_day_cell, exact = FALSE)
-          }, error = function(e) NA)
-          wilcox_p <- if (!is.na(wilcox_test)) wilcox_test$p.value else NA
-          
-          # Welch t-test only if data isn't constant
-          if (var(data_day_cell$cell_cm2) > 0) {
+        
+          # Run Wilcoxon, Welch, and Paired t-tests if exactly two treatments
+          if (length(unique(data_day_cell$treatment)) == 2) {
+            
+            wilcox_test <- wilcox.test(cell_cm2 ~ treatment, data = data_day_cell, exact = FALSE)
+            wilcox_p <- wilcox_test$p.value
+            
+            
+            if (var(data_day_cell$cell_cm2) > 0) {
             welch_test <- t.test(cell_cm2 ~ treatment, data = data_day_cell, var.equal = FALSE)
             welch_p <- welch_test$p.value
             
-            # Paired t-test if matching subjects are found and data isn’t constant
-             if (!any(duplicated(data_day_cell$subject))) {
-              paired_test <- t.test(cell_cm2 ~ treatment, data = data_day_cell, paired = TRUE)
+            # Paired t-test 
+            # Step 1: Reshape the data 
+            data_paired <- data_day_cell %>%
+              select(exp, treatment, cell_cm2) %>%  
+              spread(key = treatment, value = cell_cm2)
+            
+            # Step 3: Perform a paired t-test
+            if (all(c(control_group, current_treatment) %in% colnames(data_paired))) {
+              paired_test <- t.test(data_paired[[control_group]], data_paired[[current_treatment]], paired = TRUE)
               paired_p <- paired_test$p.value
+            } 
             }
           }
-        }
+        
         
         # Store results
         results_treatment <- rbind(results_treatment, data.frame(
           Day = day_val,
           Cell = cell_val,
-          Compared_Treatment = paste(treatment_val, "vs", control_group),
+          Compared_Treatment = paste(current_treatment, "vs", control_group),
           Paired_TTest_PValue = paired_p,
           Kruskal_Wallis_PValue = kruskal_p,
           Welch_TTest_PValue = welch_p,
